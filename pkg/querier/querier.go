@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"sync"
 
 	"github.com/SigNoz/signoz/pkg/errors"
@@ -53,6 +54,53 @@ func New(
 	}
 }
 
+// extractShiftFromBuilderQuery extracts the shift value from timeShift function if present
+func extractShiftFromBuilderQuery[T any](spec qbtypes.QueryBuilderQuery[T]) int64 {
+	for _, fn := range spec.Functions {
+		if fn.Name == qbtypes.FunctionNameTimeShift && len(fn.Args) > 0 {
+			switch v := fn.Args[0].Value.(type) {
+			case float64:
+				return int64(v)
+			case int64:
+				return v
+			case int:
+				return int64(v)
+			case string:
+				if shiftFloat, err := strconv.ParseFloat(v, 64); err == nil {
+					return int64(shiftFloat)
+				}
+			}
+		}
+	}
+	return 0
+}
+
+// adjustTimeRangeForShift adjusts the time range based on the shift value from timeShift function
+func adjustTimeRangeForShift[T any](spec qbtypes.QueryBuilderQuery[T], tr qbtypes.TimeRange, kind qbtypes.RequestType) qbtypes.TimeRange {
+	// Only apply time shift for time series and scalar queries
+	// Raw/list queries don't support timeshift
+	if kind != qbtypes.RequestTypeTimeSeries && kind != qbtypes.RequestTypeScalar {
+		return tr
+	}
+
+	// Use the ShiftBy field if it's already populated, otherwise extract it
+	shiftBy := spec.ShiftBy
+	if shiftBy == 0 {
+		shiftBy = extractShiftFromBuilderQuery(spec)
+	}
+
+	if shiftBy == 0 {
+		return tr
+	}
+
+	// ShiftBy is in seconds, convert to milliseconds and shift backward in time
+	shiftMS := shiftBy * 1000
+	return qbtypes.TimeRange{
+		From: tr.From - uint64(shiftMS),
+		To:   tr.To - uint64(shiftMS),
+	}
+}
+
 func (q *querier) QueryRange(ctx context.Context, orgID valuer.UUID, req *qbtypes.QueryRangeRequest) (*qbtypes.QueryRangeResponse, error) {
 
 	queries := make(map[string]qbtypes.Query)
@@ -78,15 +126,24 @@ func (q *querier) QueryRange(ctx context.Context, orgID valuer.UUID, req *qbtype
 		case qbtypes.QueryTypeBuilder:
 			switch spec := query.Spec.(type) {
 			case qbtypes.QueryBuilderQuery[qbtypes.TraceAggregation]:
-				bq := newBuilderQuery(q.telemetryStore, q.traceStmtBuilder, spec, qbtypes.TimeRange{From: req.Start, To: req.End}, req.RequestType)
+				// Populate ShiftBy field for caching
+				spec.ShiftBy = extractShiftFromBuilderQuery(spec)
+				timeRange := adjustTimeRangeForShift(spec, qbtypes.TimeRange{From: req.Start, To: req.End}, req.RequestType)
+				bq := newBuilderQuery(q.telemetryStore, q.traceStmtBuilder, spec, timeRange, req.RequestType)
 				queries[spec.Name] = bq
 				steps[spec.Name] = spec.StepInterval
 			case qbtypes.QueryBuilderQuery[qbtypes.LogAggregation]:
-				bq := newBuilderQuery(q.telemetryStore, q.logStmtBuilder, spec, qbtypes.TimeRange{From: req.Start, To: req.End}, req.RequestType)
+				// Populate ShiftBy field for caching
+				spec.ShiftBy = extractShiftFromBuilderQuery(spec)
+				timeRange := adjustTimeRangeForShift(spec, qbtypes.TimeRange{From: req.Start, To: req.End}, req.RequestType)
+				bq := newBuilderQuery(q.telemetryStore, q.logStmtBuilder, spec, timeRange, req.RequestType)
 				queries[spec.Name] = bq
 				steps[spec.Name] = spec.StepInterval
 			case qbtypes.QueryBuilderQuery[qbtypes.MetricAggregation]:
-				bq := newBuilderQuery(q.telemetryStore, q.metricStmtBuilder, spec, qbtypes.TimeRange{From: req.Start, To: req.End}, req.RequestType)
+				// Populate ShiftBy field for caching
+				spec.ShiftBy = extractShiftFromBuilderQuery(spec)
+				timeRange := adjustTimeRangeForShift(spec, qbtypes.TimeRange{From: req.Start, To: req.End}, req.RequestType)
+				bq := newBuilderQuery(q.telemetryStore, q.metricStmtBuilder, spec, timeRange, req.RequestType)
 				queries[spec.Name] = bq
 				steps[spec.Name] = spec.StepInterval
 			default:
@@ -323,11 +380,20 @@ func (q *querier) createRangedQuery(originalQuery qbtypes.Query, timeRange qbtyp
 	case *chSQLQuery:
 		return newchSQLQuery(q.telemetryStore, qt.query, qt.args, timeRange, qt.kind)
 	case *builderQuery[qbtypes.TraceAggregation]:
-		return newBuilderQuery(q.telemetryStore, q.traceStmtBuilder, qt.spec, timeRange, qt.kind)
+		// Populate ShiftBy for the new query
+		qt.spec.ShiftBy = extractShiftFromBuilderQuery(qt.spec)
+		adjustedTimeRange := adjustTimeRangeForShift(qt.spec, timeRange, qt.kind)
+		return newBuilderQuery(q.telemetryStore, q.traceStmtBuilder, qt.spec, adjustedTimeRange, qt.kind)
 	case *builderQuery[qbtypes.LogAggregation]:
-		return newBuilderQuery(q.telemetryStore, q.logStmtBuilder, qt.spec, timeRange, qt.kind)
+		// Populate ShiftBy for the new query
+		qt.spec.ShiftBy = extractShiftFromBuilderQuery(qt.spec)
+		adjustedTimeRange := adjustTimeRangeForShift(qt.spec, timeRange, qt.kind)
+		return newBuilderQuery(q.telemetryStore, q.logStmtBuilder, qt.spec, adjustedTimeRange, qt.kind)
 	case *builderQuery[qbtypes.MetricAggregation]:
-		return newBuilderQuery(q.telemetryStore, q.metricStmtBuilder, qt.spec, timeRange, qt.kind)
+		// Populate ShiftBy for the new query
+		qt.spec.ShiftBy = extractShiftFromBuilderQuery(qt.spec)
+		adjustedTimeRange := adjustTimeRangeForShift(qt.spec, timeRange, qt.kind)
+		return newBuilderQuery(q.telemetryStore, q.metricStmtBuilder, qt.spec, adjustedTimeRange, qt.kind)
 	default:
 		return nil
 	}

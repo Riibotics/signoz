@@ -381,7 +381,7 @@ type FunctionArg struct {
 	// name of the argument
 	Name string `json:"name,omitempty"`
 	// value of the argument
-	Value string `json:"value"`
+	Value any `json:"value"`
 }
 
 type Function struct {

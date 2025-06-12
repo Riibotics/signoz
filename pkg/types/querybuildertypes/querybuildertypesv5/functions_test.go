@@ -677,3 +677,62 @@ func TestApplyFunctions(t *testing.T) {
 		}
 	}
 }
+
+func TestParseFloat64Arg(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    any
+		expected float64
+		wantErr  bool
+	}{
+		{
+			name:     "float64 value",
+			value:    float64(3600),
+			expected: 3600,
+			wantErr:  false,
+		},
+		{
+			name:     "int64 value",
+			value:    int64(3600),
+			expected: 3600,
+			wantErr:  false,
+		},
+		{
+			name:     "int value",
+			value:    int(3600),
+			expected: 3600,
+			wantErr:  false,
+		},
+		{
+			name:     "string value",
+			value:    "3600",
+			expected: 3600,
+			wantErr:  false,
+		},
+		{
+			name:     "invalid string value",
+			value:    "invalid",
+			expected: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "unsupported type",
+			value:    []int{1, 2, 3},
+			expected: 0,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseFloat64Arg(tt.value)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseFloat64Arg() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.expected {
+				t.Errorf("parseFloat64Arg() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

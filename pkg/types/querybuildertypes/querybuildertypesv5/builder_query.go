@@ -55,6 +55,10 @@ type QueryBuilderQuery[T any] struct {
 
 	// functions to apply to the query
 	Functions []Function `json:"functions,omitempty"`
+
+	// ShiftBy is extracted from timeShift function for internal use (caching)
+	// This field is not serialized to JSON
+	ShiftBy int64 `json:"-"`
 }
 
 // UnmarshalJSON implements custom JSON unmarshaling to disallow unknown fields
