@@ -3,6 +3,7 @@ package postgressqlschema
 import (
 	"context"
 
+	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/factory"
 	"github.com/SigNoz/signoz/pkg/sqlschema"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
@@ -31,9 +32,12 @@ func New(ctx context.Context, providerSettings factory.ProviderSettings, config 
 		fmter:    fmter,
 		settings: settings,
 		operator: sqlschema.NewOperator(fmter, sqlschema.OperatorSupport{
+			CreateConstraint:        true,
 			DropConstraint:          true,
 			ColumnIfNotExistsExists: true,
 			AlterColumnSetNotNull:   true,
+			AlterColumnSetDefault:   true,
+			AlterColumnSetDataType:  true,
 		}),
 	}, nil
 }
@@ -61,7 +65,7 @@ FROM
 WHERE
     c.table_name = ?`, string(tableName))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, provider.sqlstore.WrapNotFoundErrf(err, errors.CodeNotFound, "table (%s) not found", tableName)
 	}
 
 	defer func() {
