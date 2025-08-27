@@ -60,7 +60,7 @@ import LegendColors from './LegendColors/LegendColors';
 import ThresholdSelector from './Threshold/ThresholdSelector';
 import { ThresholdProps } from './Threshold/types';
 import { timePreferance } from './timeItems';
-import YAxisUnitSelector from './YAxisUnitSelector';
+import YAxisUnitSelector from './YAxisUnitSelectorV2';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -339,7 +339,6 @@ function RightContainer({
 					<YAxisUnitSelector
 						defaultValue={yAxisUnit}
 						onSelect={setYAxisUnit}
-						value={yAxisUnit || ''}
 						fieldLabel={
 							selectedGraphType === PanelDisplay.VALUE ||
 							selectedGraphType === PanelDisplay.PIE
