@@ -297,6 +297,10 @@ function NewWidget({ selectedGraph }: NewWidgetProps): JSX.Element {
 		columnWidths,
 	]);
 
+	const [initialYAxisUnit, setInitialYAxisUnit] = useState<string | undefined>(
+		selectedWidget?.yAxisUnit,
+	);
+
 	useEffect(() => {
 		const compositeQuery = query.get('compositeQuery');
 		if (compositeQuery) {
@@ -304,6 +308,7 @@ function NewWidget({ selectedGraph }: NewWidgetProps): JSX.Element {
 				const decoded = decodeURIComponent(compositeQuery);
 				const parsedQuery = JSON.parse(decoded) as Query;
 				setYAxisUnit(parsedQuery.unit || 'none');
+				setInitialYAxisUnit(parsedQuery.unit);
 			} catch (error) {
 				setYAxisUnit('none');
 			}
@@ -782,6 +787,7 @@ function NewWidget({ selectedGraph }: NewWidgetProps): JSX.Element {
 							setStackedBarChart={setStackedBarChart}
 							opacity={opacity}
 							yAxisUnit={yAxisUnit}
+							initialYAxisUnit={initialYAxisUnit}
 							columnUnits={columnUnits}
 							setColumnUnits={setColumnUnits}
 							bucketCount={bucketCount}

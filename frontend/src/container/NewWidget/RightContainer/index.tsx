@@ -91,6 +91,7 @@ function RightContainer({
 	setSelectedTime,
 	selectedTime,
 	yAxisUnit,
+	initialYAxisUnit,
 	setYAxisUnit,
 	setGraphHandler,
 	thresholds,
@@ -338,6 +339,7 @@ function RightContainer({
 				{allowYAxisUnit && (
 					<YAxisUnitSelector
 						defaultValue={yAxisUnit}
+						initialValue={initialYAxisUnit || ''}
 						onSelect={setYAxisUnit}
 						fieldLabel={
 							selectedGraphType === PanelDisplay.VALUE ||
@@ -527,6 +529,7 @@ interface RightContainerProps {
 	setSelectedTime: Dispatch<SetStateAction<timePreferance>>;
 	selectedTime: timePreferance;
 	yAxisUnit: string;
+	initialYAxisUnit: string | undefined;
 	stackedBarChart: boolean;
 	setStackedBarChart: Dispatch<SetStateAction<boolean>>;
 	bucketWidth: number;
