@@ -29,3 +29,5 @@ func (user *user) Tuples(subject string, relation Relation, selector Selector, p
 func (user *user) Type() Type {
 	return TypeUser
 }
+
+type AuthenticatedUser struct{}
