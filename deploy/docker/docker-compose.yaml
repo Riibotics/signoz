@@ -116,7 +116,7 @@ services:
     command:
       - --config=/root/config/prometheus.yml
     ports:
-      - "8080:8080" # signoz port
+      - "58000:8080" # signoz port
     #   - "6060:6060"     # pprof port
     volumes:
       - ../common/signoz/prometheus.yml:/root/config/prometheus.yml
@@ -191,7 +191,22 @@ networks:
 volumes:
   clickhouse:
     name: signoz-clickhouse
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CLICKHOUSE_LOG_PATH}
   sqlite:
     name: signoz-sqlite
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${SQLITE_DATA_PATH}
   zookeeper-1:
     name: signoz-zookeeper-1
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${ZOOKEEPER_LOG_PATH}
