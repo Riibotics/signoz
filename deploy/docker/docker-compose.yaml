@@ -116,7 +116,7 @@ services:
     command:
       - --config=/root/config/prometheus.yml
     ports:
-      - "28000:8080" # signoz port
+      - "58000:8080" # signoz port
     #   - "6060:6060"     # pprof port
     volumes:
       - ../common/signoz/prometheus.yml:/root/config/prometheus.yml
