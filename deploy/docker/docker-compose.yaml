@@ -195,7 +195,7 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${CLICKHOUSE_DATA_PATH}
+      device: ${CLICKHOUSE_LOG_PATH}
   sqlite:
     name: signoz-sqlite
     driver: local
@@ -209,4 +209,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${ZOOKEEPER_DATA_PATH}
+      device: ${ZOOKEEPER_LOG_PATH}
